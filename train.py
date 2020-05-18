@@ -234,10 +234,10 @@ def train(train_iter, dev_iter, dev_adv_iter, model, args, static_model, eps, lp
                                                                              "{0:.2E}".format(rel_mean_abs_diff),
                                                                              ["{0:.2E}".format(x) for x in rel_percentile]))
 
-                dev_acc, dev_loss = eval(dev_iter, model, static_model, args, is_adv_train=is_adv_train)
+                dev_acc, dev_loss, _ = eval(dev_iter, model, static_model, args, is_adv_train=is_adv_train)
                 
                 if len(dev_adv_iter.dataset)!=0:
-                    dev_adv_acc, dev_adv_loss = eval(dev_adv_iter, model, static_model, args, is_adv_train=is_adv_train)
+                    dev_adv_acc, dev_adv_loss, _ = eval(dev_adv_iter, model, static_model, args, is_adv_train=is_adv_train)
                 else:
                     dev_adv_acc, dev_adv_loss = -1, -1
             
@@ -388,53 +388,53 @@ def train_model_eps_ball(train_iter, dev_iter, dev_adv_iter, model, args, static
 
 def eval(data_iter, model, static_model, args, is_adv_train=False):
     with torch.no_grad():
-        model.eval()
-        corrects, avg_loss = 0, 0
-        corrects_with_model_target = 0
-        for batch in data_iter:
-            feature, target = batch.text, batch.label
-            feature = feature.data.t()
-            # target.data = target.data.sub_(1)
-            if args.cuda:
-                feature, target = feature.cuda(), target.cuda()
+        # model.eval()
+        # corrects, avg_loss = 0, 0
+        # corrects_with_model_target = 0
+        # for batch in data_iter:
+        #     feature, target = batch.text, batch.label
+        #     feature = feature.data.t()
+        #     # target.data = target.data.sub_(1)
+        #     if args.cuda:
+        #         feature, target = feature.cuda(), target.cuda()
 
-            logit = model(feature)
-            if is_adv_train:
-                # if is_adv_train, then update the target labels 
-                # orig examples 
-                orig_idx = (batch.adv_label == 0).type(torch.LongTensor)
-                # adv examples 
-                adv_idx  = (batch.adv_label == 1).type(torch.LongTensor)
+        #     logit = model(feature)
+        #     if is_adv_train:
+        #         # if is_adv_train, then update the target labels 
+        #         # orig examples 
+        #         orig_idx = (batch.adv_label == 0).type(torch.LongTensor)
+        #         # adv examples 
+        #         adv_idx  = (batch.adv_label == 1).type(torch.LongTensor)
 
-                if IS_CUDA:
-                    orig_idx = orig_idx.type(torch.cuda.LongTensor)
-                    adv_idx = adv_idx.type(torch.cuda.LongTensor)
+        #         if IS_CUDA:
+        #             orig_idx = orig_idx.type(torch.cuda.LongTensor)
+        #             adv_idx = adv_idx.type(torch.cuda.LongTensor)
 
-                orig_pred_label = F.softmax(static_model(feature), dim=1)#.type(torch.FloatTensor)
-                orig_pred_label = torch.argmax(orig_pred_label, dim=1)
-                new_target = orig_pred_label*orig_idx + target*adv_idx  
+        #         orig_pred_label = F.softmax(static_model(feature), dim=1)#.type(torch.FloatTensor)
+        #         orig_pred_label = torch.argmax(orig_pred_label, dim=1)
+        #         new_target = orig_pred_label*orig_idx + target*adv_idx  
 
-            # print(target)
-            loss_with_orig_target  = F.cross_entropy(logit, target)
-            if is_adv_train:
-                loss_with_model_target = F.cross_entropy(logit, new_target)
+        #     # print(target)
+        #     loss_with_orig_target  = F.cross_entropy(logit, target)
+        #     if is_adv_train:
+        #         loss_with_model_target = F.cross_entropy(logit, new_target)
 
-            avg_loss += loss_with_orig_target.item()
-            # print(torch.max(logit, 1)[1].view(target.size()).data[1:10])
-            # print(target.data[1:10])
-            corrects += (torch.max(logit, 1)[1].view(target.size()).data == target.data).sum()
-            if is_adv_train:
-                corrects_with_model_target += (torch.max(logit, 1)[1].view(new_target.size()).data == new_target.data).sum()
-        size = len(data_iter.dataset)
-        avg_loss /= size
-        accuracy = 100.0 * corrects/size
-        relative_accuracy = 100.0 * corrects_with_model_target/size
+        #     avg_loss += loss_with_orig_target.item()
+        #     # print(torch.max(logit, 1)[1].view(target.size()).data[1:10])
+        #     # print(target.data[1:10])
+        #     corrects += (torch.max(logit, 1)[1].view(target.size()).data == target.data).sum()
+        #     if is_adv_train:
+        #         corrects_with_model_target += (torch.max(logit, 1)[1].view(new_target.size()).data == new_target.data).sum()
+        # size = len(data_iter.dataset)
+        # avg_loss /= size
+        # accuracy = 100.0 * corrects/size
+        # relative_accuracy = 100.0 * corrects_with_model_target/size
 
-        # if adv:
-        #     print('Adversarial Dev - loss: {:.6f}  acc: {:.4f}\n'.format(avg_loss,accuracy))
-        # else:
-        #     print('\nNormal Dev - loss: {:.6f}  acc: {:.4f}'.format(avg_loss,accuracy))
-        return accuracy, avg_loss, relative_accuracy
+        # # if adv:
+        # #     print('Adversarial Dev - loss: {:.6f}  acc: {:.4f}\n'.format(avg_loss,accuracy))
+        # # else:
+        # #     print('\nNormal Dev - loss: {:.6f}  acc: {:.4f}'.format(avg_loss,accuracy))
+        return 0,0,0
 
 
 def predict(text, model, text_field, label_feild, cuda_flag):

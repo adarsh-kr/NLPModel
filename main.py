@@ -133,24 +133,6 @@ def mr(text_field, label_field, adv_label_field, dataset, **kargs):
         i+=1
     print("Total Vocab:", i)
 
-    # label_field.build_vocab(train_data, dev_data, dev_data_adv)
-    # print(label_field.vocab.itos)
-    # print(label_field.vocab.stoi)
-
-    # time.sleep(10)
-    # # there's one unknown also at 0 index
-    # label_field.vocab.stoi["positive"] = 2
-    # label_field.vocab.stoi["negative"] = 1
-    # label_field.vocab.itos[2] = "positive"
-    # label_field.vocab.itos[1] = "negative"
-
-
-    # adv_label_field.build_vocab(train_data, dev_data, dev_data_adv)
-    # if args.adv_train:
-    #     adv_label_field.vocab.stoi["0"] = 1
-    #     adv_label_field.vocab.stoi["1"] = 2
-    #     adv_label_field.vocab.itos[1] = "0"
-    #     adv_label_field.vocab.itos[2] = "1"
 
     train_iter, dev_iter, dev_adv_iter = data.Iterator.splits(
                                 (train_data, dev_data, dev_data_adv), 
@@ -171,13 +153,6 @@ train_iter, dev_iter, dev_adv_iter = mr(text_field, label_field, adv_label_field
 
 # update args and print
 args.embed_num = len(text_field.vocab)
-# print(args.embed_num)
-# print(type(text_field.vocab))
-# fi=open("rt-polaritydata/vocab.txt","w+",encoding='ISO-8859-1')
-# for i in range(len(text_field.vocab)):
-#     fi.write(str(text_field.vocab.itos[i])+"\n")
-# fi.close()
-# exit()
 args.class_num = args.class_num #len(label_field.vocab) - 1
 args.cuda = (not args.no_cuda) and torch.cuda.is_available(); del args.no_cuda
 args.kernel_sizes = [int(k) for k in args.kernel_sizes.split(',')]
@@ -194,86 +169,12 @@ elif args.model_type.lower() == "lstm":
     cnn = model.LSTM_Text(args)
 
 static_cnn = None
-if args.snapshot is not None:
-    print('\nLoading model from {}...'.format(args.snapshot))
-    args.snapshot = "saved_model/" + args.dataset + "_" + args.model_type.lower() + ".pt"
-    print(args.snapshot)
-    cnn.load_state_dict(torch.load(args.snapshot, map_location=torch.device('cpu')))
-    # pre-saved model
-    if args.model_type.lower() == "cnn":
-        static_cnn = model.CNN_Text(args)
-    elif args.model_type.lower() == "lstm":
-        static_cnn = model.LSTM_Text(args)
-    static_cnn.load_state_dict(torch.load(args.snapshot, map_location=torch.device('cpu')))
-    static_cnn.eval()
+
     
 if args.cuda:
     torch.cuda.set_device(args.device)
     cnn = cnn.cuda()
-    if args.snapshot is not None:
-        static_cnn = static_cnn.cuda()
-
-best_dev_acc, best_adv_acc = -1,-1
-# train or predict
-if args.predict is not None:
-    label = train.predict(args.predict, cnn, text_field, label_field, adv_label_field , args.cuda)
-    print('\n[Text]  {}\n[Label] {}\n'.format(args.predict, label))
-elif args.test:
-    try:
-        train.eval(test_iter, cnn, args) 
-    except Exception as e:
-        print("\nSorry. The test dataset doesn't  exist.\n")
-else:
-    try:
-        # print("First Eval ")
-        # print(label_field.vocab.stoi, label_field.vocab.itos)
-        # for batch in dev_iter:
-        #     print([text_field.vocab.itos[x] for x in batch.text[:,1]], batch.label[1], batch.adv_label[1])
-        #     print([text_field.vocab.itos[x] for x in batch.text[:,2]], batch.label[2], batch.adv_label[2])
-        #     print([text_field.vocab.itos[x] for x in batch.text[:,4]], batch.label[4], batch.adv_label[4])
-        dev_acc_bfr,_, dev_acc_rel_bfr = train.eval(dev_iter, cnn, static_cnn, args, is_adv_train=True)
-        print(dev_acc_bfr,dev_acc_rel_bfr)
-        time.sleep(2)
-        best_dev_acc, best_adv_acc= train.train_model_eps_ball(train_iter, dev_iter, dev_adv_iter, cnn, args, static_cnn, eps=args.eps, lp_norm='inf', model_eps_ball=args.model_eps_ball)
-    except KeyboardInterrupt:
-        print('\n' + '-' * 89)
-        print('Exiting from training early')
 
 
-with open("13thMay_results_new_2.txt", "a") as writer:
-    out_str = "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
-                                args.dataset,
-                                args.model_type, 
-                                dev_acc_bfr,
-                                dev_acc_rel_bfr,
-                                (args.weight[0]),
-                                (args.weight[1]),
-                                args.eps,
-                                best_dev_acc[0],
-                                best_dev_acc[1],
-                                best_dev_acc[2],
-                                best_dev_acc[3],
-                                best_dev_acc[4],
-                                best_dev_acc[3]*100/best_dev_acc[4],
-                                best_dev_acc[5],
-                                best_dev_acc[6],
-                                best_dev_acc[5]*100/best_dev_acc[6],
-                                best_dev_acc[7],
-                                best_dev_acc[8],
-                                best_dev_acc[7]*100/best_dev_acc[8],
-                                best_adv_acc[0],
-                                best_adv_acc[1],
-                                best_adv_acc[2],
-                                best_adv_acc[3],
-                                best_adv_acc[4],
-                                best_adv_acc[3]*100/best_adv_acc[4],
-                                best_adv_acc[5],
-                                best_adv_acc[6],
-                                best_adv_acc[5]*100/best_adv_acc[6],
-                                best_adv_acc[7],
-                                best_adv_acc[8],
-                                best_adv_acc[7]*100/best_adv_acc[8],
-                                args.train_on_base_model_label,
-                                args.model_eps_ball,
-                                args.snapshot)
-    writer.write(out_str)
+train.train(train_iter, dev_iter, dev_adv_iter, cnn, args, static_cnn, args.eps, lp_norm='inf', model_eps_ball=False)
+
