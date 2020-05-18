@@ -430,10 +430,6 @@ def eval(data_iter, model, static_model, args, is_adv_train=False):
         # accuracy = 100.0 * corrects/size
         # relative_accuracy = 100.0 * corrects_with_model_target/size
 
-        # # if adv:
-        # #     print('Adversarial Dev - loss: {:.6f}  acc: {:.4f}\n'.format(avg_loss,accuracy))
-        # # else:
-        # #     print('\nNormal Dev - loss: {:.6f}  acc: {:.4f}'.format(avg_loss,accuracy))
         return 0,0,0
 
 
